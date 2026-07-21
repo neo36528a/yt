@@ -1,12 +1,18 @@
 {
   "name": "ultra-video-downloader",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
+  "main": "electron/main.js",
+  "author": "Ultra Video Downloader Team",
+  "description": "Fast & Secure Video Downloader — Desktop Application",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron:dev": "npm run build && electron .",
+    "electron:build": "node scripts/build-electron.js",
+    "electron:package": "node scripts/build-electron.js && electron-builder --win --config electron-builder.json"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.3",
@@ -29,6 +35,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",

@@ -11,6 +11,10 @@
 /build
 /downloads
 
+# electron build output
+/dist/
+/release/
+
 # binaries (downloaded dynamically on first run)
 /bin/
 

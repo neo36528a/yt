@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Standalone output for Electron desktop app packaging
+  output: 'standalone',
+
   // Allow external images for video thumbnails
   images: {
     remotePatterns: [

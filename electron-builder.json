@@ -1,0 +1,39 @@
+{
+  "appId": "com.ultravideodownloader.app",
+  "productName": "Ultra Video Downloader",
+  "copyright": "Copyright © 2026 Ultra Video Downloader",
+  "npmRebuild": false,
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "electron/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "dist/standalone",
+      "to": "standalone",
+      "filter": ["**/*"]
+    },
+    {
+      "from": "dist/bin",
+      "to": "bin",
+      "filter": ["**/*"]
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64"]
+      }
+    ],
+    "executableName": "UltraVideoDownloader",
+    "icon": "public/favicon.ico",
+    "artifactName": "Ultra-Video-Downloader-${version}.${ext}"
+  }
+}
