@@ -204,6 +204,18 @@ export function getYtDlpCommonArgs(): string[] {
 }
 
 /**
+ * Create environment object for spawning yt-dlp with Node executable in PATH
+ * so yt-dlp can run node to solve YouTube EJS/JS challenges.
+ */
+function getSpawnEnv(): NodeJS.ProcessEnv {
+  const nodeDir = path.dirname(process.execPath);
+  return {
+    ...process.env,
+    PATH: `${nodeDir}${path.delimiter}${process.env.PATH || ''}`,
+  };
+}
+
+/**
  * Analyze a URL using yt-dlp --dump-json.
  */
 export async function analyzeUrl(url: string): Promise<VideoInfo> {
@@ -220,6 +232,7 @@ export async function analyzeUrl(url: string): Promise<VideoInfo> {
       const proc = spawn(ytDlpPath, args, {
         shell: false,
         timeout: 120000,
+        env: getSpawnEnv(),
       });
 
       let stdout = '';
@@ -449,6 +462,9 @@ export async function startDownload(
     '--newline',
     '--no-mtime',
     '--concurrent-fragments', '5',
+    '--retries', '10',
+    '--fragment-retries', '10',
+    '--hls-use-mpegts',
     '--progress',
     '--progress-template', '%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s',
     '-o', outputTemplate,
@@ -506,6 +522,7 @@ export async function startDownload(
   const proc = spawn(ytDlpPath, args, {
     shell: false,
     timeout: 0, // 0 = Unlimited timeout to support long videos (2+ hours)
+    env: getSpawnEnv(),
   });
 
   activeProcesses.set(downloadId, proc);
@@ -548,6 +565,13 @@ export async function startDownload(
       ) {
         callbacks.onError(
           'YOUTUBE_BOT_BLOCK: YouTube requires authentication for this video. Please upload or paste your cookies.txt in Settings to continue.',
+        );
+        return;
+      }
+
+      if (stderrBuf.includes('Video unavailable') || stderrBuf.includes('404')) {
+        callbacks.onError(
+          'This video is unavailable or has been removed from YouTube. Please check the URL.',
         );
         return;
       }
