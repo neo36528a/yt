@@ -180,6 +180,19 @@ EXPOSE 3000
 CMD ["npm", "start"]
 ```
 
+### Troubleshooting: YouTube "Sign in to confirm you're not a bot"
+
+If YouTube returns `Sign in to confirm you're not a bot` when deploying to cloud platforms (Render, Railway, Fly.io, Vercel, Docker):
+
+1. **Automatic Mobile Client Extractor (Built-in)**:
+   - Ultra Video Downloader automatically uses `--extractor-args "youtube:player_client=ios,web,mweb"` to route requests through YouTube's mobile API, bypassing web bot checks.
+
+2. **Providing YouTube Cookies (Optional for restricted videos)**:
+   - Export your YouTube cookies using a browser extension like **Get cookies.txt LOCALLY** (Chrome/Firefox).
+   - Place `cookies.txt` in `./cookies.txt` or `./data/cookies.txt`.
+   - **For Cloud Services**: Set the `YOUTUBE_COOKIES` environment variable with the raw contents of your `cookies.txt` file (or base64 encoded string prefixed with `base64:`).
+
+
 ---
 
 ## ⌨️ Keyboard Shortcuts

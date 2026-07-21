@@ -117,6 +117,80 @@ export async function checkFfmpeg(): Promise<boolean> {
     proc.on('error', () => resolve(false));
   });
 }
+/**
+ * Detect or create a valid cookies.txt file for yt-dlp authentication.
+ */
+export function getCookiesPath(): string | null {
+  // 1. Explicit path from environment variable
+  if (process.env.COOKIES_PATH && fs.existsSync(process.env.COOKIES_PATH)) {
+    return process.env.COOKIES_PATH;
+  }
+
+  // 2. Local root or data folder cookies.txt
+  const rootCookies = path.join(process.cwd(), 'cookies.txt');
+  if (fs.existsSync(rootCookies)) return rootCookies;
+
+  const dataCookies = path.join(process.cwd(), 'data', 'cookies.txt');
+  if (fs.existsSync(dataCookies)) return dataCookies;
+
+  // 3. YOUTUBE_COOKIES environment variable (raw cookies string or base64)
+  if (process.env.YOUTUBE_COOKIES) {
+    try {
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      const tmpCookiesPath = path.join(dataDir, 'yt_cookies.txt');
+      let content = process.env.YOUTUBE_COOKIES.trim();
+      if (content.startsWith('base64:')) {
+        content = Buffer.from(content.slice(7), 'base64').toString('utf-8');
+      }
+      fs.writeFileSync(tmpCookiesPath, content);
+      return tmpCookiesPath;
+    } catch {
+      // Ignore write error
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Common yt-dlp CLI arguments to prevent YouTube bot detection & sign-in blocks.
+ */
+export function getYtDlpCommonArgs(): string[] {
+  const args: string[] = [
+    '--no-playlist',
+    '--no-warnings',
+    '--no-check-certificates',
+    '--js-runtimes',
+    'node',
+    '--user-agent',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  ];
+
+  // Configure YouTube extractor client options to bypass 'Sign in to confirm you are not a bot'
+  const poToken = process.env.PO_TOKEN || process.env.YOUTUBE_PO_TOKEN;
+  if (poToken) {
+    args.push('--extractor-args', `youtube:player_client=ios,web,mweb;po_token=web+${poToken}`);
+  } else {
+    args.push('--extractor-args', 'youtube:player_client=ios,web,mweb');
+  }
+
+  // Pass cookies if available
+  const cookiesPath = getCookiesPath();
+  if (cookiesPath) {
+    args.push('--cookies', cookiesPath);
+  }
+
+  // Proxy support
+  const proxyUrl = process.env.YT_DLP_PROXY || process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
+  if (proxyUrl) {
+    args.push('--proxy', proxyUrl);
+  }
+
+  return args;
+}
 
 /**
  * Analyze a URL using yt-dlp --dump-json.
@@ -128,11 +202,7 @@ export async function analyzeUrl(url: string): Promise<VideoInfo> {
     return await new Promise<VideoInfo>((resolve, reject) => {
       const args = [
         '--dump-json',
-        '--no-playlist',
-        '--no-warnings',
-        '--no-check-certificates',
-        '--js-runtimes',
-        'node',
+        ...getYtDlpCommonArgs(),
         url,
       ];
 
@@ -364,13 +434,9 @@ export async function startDownload(
   const outputTemplate = path.join(outputDir, `${fileStem}.%(ext)s`);
 
   const args: string[] = [
-    '--no-playlist',
-    '--no-warnings',
+    ...getYtDlpCommonArgs(),
     '--newline',
     '--no-mtime',
-    '--no-check-certificates',
-    '--js-runtimes', 'node',
-    '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     '--concurrent-fragments', '5',
     '--progress',
     '--progress-template', '%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s',
