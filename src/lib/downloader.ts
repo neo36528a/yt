@@ -131,6 +131,8 @@ export async function analyzeUrl(url: string): Promise<VideoInfo> {
         '--no-playlist',
         '--no-warnings',
         '--no-check-certificates',
+        '--js-runtimes',
+        'node',
         url,
       ];
 
@@ -367,6 +369,7 @@ export async function startDownload(
     '--newline',
     '--no-mtime',
     '--no-check-certificates',
+    '--js-runtimes', 'node',
     '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     '--progress',
     '--progress-template', '%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s',
@@ -396,13 +399,28 @@ export async function startDownload(
 
     const height = heightMap[resolution] || '1080';
 
-    // Combine best video track and best audio track into ONE output MP4/WebM file
-    args.push(
-      '-f',
-      `bv*[height<=${height}]+ba/b[height<=${height}]/b`,
-      '--merge-output-format',
-      format,
-    );
+    if (format === 'mp4') {
+      args.push(
+        '-f',
+        `bv*[ext=mp4][height<=${height}]+ba[ext=m4a]/bv*[height<=${height}]+ba/b[height<=${height}]/b`,
+        '--merge-output-format',
+        'mp4',
+      );
+    } else if (format === 'webm') {
+      args.push(
+        '-f',
+        `bv*[ext=webm][height<=${height}]+ba[ext=webm]/bv*[height<=${height}]+ba/b[height<=${height}]/b`,
+        '--merge-output-format',
+        'webm',
+      );
+    } else {
+      args.push(
+        '-f',
+        `bv*[height<=${height}]+ba/b[height<=${height}]/b`,
+        '--merge-output-format',
+        format,
+      );
+    }
   }
 
   args.push(url);
