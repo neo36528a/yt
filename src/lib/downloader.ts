@@ -371,6 +371,7 @@ export async function startDownload(
     '--no-check-certificates',
     '--js-runtimes', 'node',
     '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    '--concurrent-fragments', '5',
     '--progress',
     '--progress-template', '%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s',
     '-o', outputTemplate,
@@ -427,7 +428,7 @@ export async function startDownload(
 
   const proc = spawn(ytDlpPath, args, {
     shell: false,
-    timeout: 600000,
+    timeout: 0, // 0 = Unlimited timeout to support long videos (2+ hours)
   });
 
   activeProcesses.set(downloadId, proc);

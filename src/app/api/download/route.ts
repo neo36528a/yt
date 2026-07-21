@@ -56,6 +56,15 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
+        // Keep-alive heartbeat every 5 seconds for long video downloads
+        const heartbeat = setInterval(() => {
+          try {
+            controller.enqueue(encoder.encode(': ping\n\n'));
+          } catch {
+            clearInterval(heartbeat);
+          }
+        }, 5000);
+
         // Enqueue download
         downloadQueue.enqueue({
           id: downloadId,
@@ -77,6 +86,7 @@ export async function POST(request: NextRequest) {
               }
             },
             onComplete: (filePath) => {
+              clearInterval(heartbeat);
               const event = `data: ${JSON.stringify({ type: 'complete', downloadId, data: { filePath } })}\n\n`;
               try {
                 controller.enqueue(encoder.encode(event));
@@ -86,6 +96,7 @@ export async function POST(request: NextRequest) {
               }
             },
             onError: (error) => {
+              clearInterval(heartbeat);
               const event = `data: ${JSON.stringify({ type: 'error', downloadId, data: { error } })}\n\n`;
               try {
                 controller.enqueue(encoder.encode(event));
