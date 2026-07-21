@@ -4,7 +4,7 @@
   "copyright": "Copyright © 2026 Ultra Video Downloader",
   "npmRebuild": false,
   "directories": {
-    "output": "release"
+    "output": "dist-app"
   },
   "files": [
     "electron/**/*"

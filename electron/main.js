@@ -77,9 +77,12 @@ async function startServer() {
   // Get the user's Downloads folder
   const downloadsDir = path.join(app.getPath('downloads'), 'Ultra Video Downloads');
 
+  let serverStderr = '';
+
   serverProcess = spawn(process.execPath, [serverPath], {
     env: {
       ...process.env,
+      ELECTRON_RUN_AS_NODE: '1', // CRITICAL: Makes Electron run as Node.js CLI instead of GUI app
       PORT: String(serverPort),
       HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production',
@@ -98,7 +101,9 @@ async function startServer() {
   });
 
   serverProcess.stderr.on('data', (data) => {
-    console.error(`[Server] ${data.toString().trim()}`);
+    const msg = data.toString();
+    serverStderr += msg;
+    console.error(`[Server] ${msg.trim()}`);
   });
 
   serverProcess.on('close', (code) => {
@@ -107,11 +112,11 @@ async function startServer() {
   });
 
   // Wait for the server to be ready
-  await waitForServer(serverPort);
+  await waitForServer(serverPort, serverStderr);
 }
 
 // ── Wait for server to accept connections ─────────────────────
-function waitForServer(port, retries = 30) {
+function waitForServer(port, getStderr, retries = 30) {
   return new Promise((resolve, reject) => {
     let attempts = 0;
     const check = () => {
@@ -122,7 +127,7 @@ function waitForServer(port, retries = 30) {
       client.on('error', () => {
         attempts++;
         if (attempts >= retries) {
-          reject(new Error('Server failed to start'));
+          reject(new Error(`Server failed to start on port ${port}.\n\nServer Output:\n${typeof getStderr === 'string' ? getStderr : ''}`));
         } else {
           setTimeout(check, 500);
         }

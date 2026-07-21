@@ -13,6 +13,7 @@
 
 # electron build output
 /dist/
+/dist-app/
 /release/
 
 # binaries (downloaded dynamically on first run)
