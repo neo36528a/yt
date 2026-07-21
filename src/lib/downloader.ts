@@ -311,6 +311,7 @@ export function startDownload(
     '--no-playlist',
     '--no-warnings',
     '--newline',
+    '--no-mtime',
     '--progress',
     '--progress-template', '%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s',
     '-o', outputTemplate,
@@ -339,10 +340,10 @@ export function startDownload(
 
     const height = heightMap[resolution] || '1080';
 
-    // Combine best video track and best audio track into ONE output MP4 file
+    // Combine best video track and best audio track into ONE output MP4/WebM file
     args.push(
       '-f',
-      `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`,
+      `bv*[height<=${height}]+ba/b[height<=${height}]/b`,
       '--merge-output-format',
       format,
     );
@@ -357,27 +358,65 @@ export function startDownload(
 
   activeProcesses.set(downloadId, proc);
 
+  let stdoutBuf = '';
+  let stderrBuf = '';
+
   proc.stdout.on('data', (data: Buffer) => {
-    const line = data.toString().trim();
-    const progress = parseProgress(line);
-    if (progress) {
-      callbacks.onProgress(progress);
+    stdoutBuf += data.toString();
+    const lines = stdoutBuf.split(/\r?\n/);
+    stdoutBuf = lines.pop() || ''; // Keep incomplete trailing chunk
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed) {
+        const progress = parseProgress(trimmed);
+        if (progress) {
+          callbacks.onProgress(progress);
+        }
+      }
     }
   });
 
   proc.stderr.on('data', (data: Buffer) => {
-    const msg = data.toString().trim();
-    if (msg && !msg.startsWith('WARNING')) {
-      console.error(`[Download ${downloadId}] stderr:`, msg);
+    const msg = data.toString();
+    stderrBuf += msg;
+    if (msg.trim() && !msg.includes('WARNING')) {
+      console.error(`[Download ${downloadId}] stderr:`, msg.trim());
     }
   });
 
   proc.on('close', (code) => {
     activeProcesses.delete(downloadId);
+
+    if (code !== 0) {
+      const cleanErr =
+        stderrBuf
+          .split(/\r?\n/)
+          .filter(
+            (l) =>
+              l.includes('ERROR:') ||
+              l.includes('Error') ||
+              l.includes('Unable') ||
+              l.includes('failed'),
+          )
+          .join(' ')
+          .trim() ||
+        stderrBuf.trim() ||
+        `Download process failed with exit code ${code}`;
+
+      callbacks.onError(cleanErr);
+      return;
+    }
+
     // Determine the exact single merged output file on disk
     const expectedFile = path.join(outputDir, `${fileStem}.${format}`);
     const actualFile = findOutputFile(outputDir, fileStem) || expectedFile;
-    callbacks.onComplete(actualFile);
+
+    if (fs.existsSync(actualFile)) {
+      callbacks.onComplete(actualFile);
+    } else {
+      callbacks.onError('Download completed but file could not be found on disk.');
+    }
   });
 
   proc.on('error', (err) => {
@@ -411,10 +450,11 @@ function parseProgress(line: string): {
 } | null {
   const parts = line.split('|');
   if (parts.length >= 5) {
-    const percent = parseFloat(parts[0].replace('%', '').trim());
+    const percentStr = parts[0].replace('%', '').trim();
+    const percent = parseFloat(percentStr);
     if (!isNaN(percent)) {
       return {
-        progress: Math.min(percent, 100),
+        progress: Math.min(Math.max(percent, 0), 100),
         speed: parts[1]?.trim() || '0 B/s',
         eta: parts[2]?.trim() || '--:--',
         downloadedSize: parts[3]?.trim() || '0 B',
@@ -427,14 +467,17 @@ function parseProgress(line: string): {
   if (percentMatch) {
     const speedMatch = line.match(/at\s+([\d.]+\s*\w+\/s)/);
     const etaMatch = line.match(/ETA\s+([\d:]+)/);
+    const percent = parseFloat(percentMatch[1]);
 
-    return {
-      progress: parseFloat(percentMatch[1]),
-      speed: speedMatch?.[1] || '...',
-      eta: etaMatch?.[1] || '--:--',
-      downloadedSize: '...',
-      totalSize: '...',
-    };
+    if (!isNaN(percent)) {
+      return {
+        progress: Math.min(Math.max(percent, 0), 100),
+        speed: speedMatch?.[1] || '...',
+        eta: etaMatch?.[1] || '--:--',
+        downloadedSize: '...',
+        totalSize: '...',
+      };
+    }
   }
 
   return null;

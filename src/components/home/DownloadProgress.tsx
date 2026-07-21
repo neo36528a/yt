@@ -145,6 +145,14 @@ function DownloadItem({ download, onPause, onResume, onCancel }: DownloadItemPro
             />
           </div>
 
+          {/* Error Details */}
+          {isFailed && download.error && (
+            <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-300 flex items-start gap-2 text-left">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <span className="break-words font-medium">{download.error}</span>
+            </div>
+          )}
+
           {/* Stats & Actions */}
           <div className="flex items-center justify-between gap-2 pt-1">
             {/* Stats */}
@@ -206,14 +214,14 @@ function DownloadItem({ download, onPause, onResume, onCancel }: DownloadItemPro
                   <Play className="w-3.5 h-3.5" />
                 </MagneticButton>
               )}
-              {(isActive || isPaused) && (
+              {(isActive || isPaused || isFailed || isCompleted) && (
                 <MagneticButton
                   variant="ghost"
                   size="sm"
                   onClick={() => onCancel(download.id)}
                   magnetic={false}
-                  className="text-red-400 hover:text-red-300"
-                  title="Cancel"
+                  className="text-slate-400 hover:text-white"
+                  title={isFailed || isCompleted ? "Remove" : "Cancel"}
                 >
                   <X className="w-3.5 h-3.5" />
                 </MagneticButton>
