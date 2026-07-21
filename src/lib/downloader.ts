@@ -13,18 +13,64 @@ import type { VideoInfo, FormatOption, MediaFormat, Resolution } from '@/types';
 const activeProcesses = new Map<string, ChildProcess>();
 
 /**
- * Get the path to yt-dlp executable.
+ * Get the path to yt-dlp executable, auto-downloading it if missing on Linux or Windows.
  */
-export function getYtDlpPath(): string {
-  const localBinExe = path.join(process.cwd(), 'bin', 'yt-dlp.exe');
-  if (fs.existsSync(localBinExe)) {
-    return localBinExe;
+export async function getYtDlpPath(): Promise<string> {
+  const isWin = process.platform === 'win32';
+  const binDir = path.join(process.cwd(), 'bin');
+
+  if (!fs.existsSync(binDir)) {
+    try {
+      fs.mkdirSync(binDir, { recursive: true });
+    } catch {
+      // Ignore
+    }
   }
-  const localBin = path.join(process.cwd(), 'bin', 'yt-dlp');
-  if (fs.existsSync(localBin)) {
-    return localBin;
+
+  const binaryName = isWin ? 'yt-dlp.exe' : 'yt-dlp';
+  const localBinPath = path.join(binDir, binaryName);
+
+  if (fs.existsSync(localBinPath)) {
+    return localBinPath;
   }
-  return 'yt-dlp';
+
+  // Check if system has yt-dlp on PATH
+  const hasSystemPath = await new Promise<boolean>((resolve) => {
+    const proc = spawn(binaryName, ['--version'], { shell: false });
+    proc.on('close', (code) => resolve(code === 0));
+    proc.on('error', () => resolve(false));
+  });
+
+  if (hasSystemPath) {
+    return binaryName;
+  }
+
+  // Check /tmp directory for Linux/serverless environments
+  const tmpBinPath = path.join('/tmp', binaryName);
+  if (!isWin && fs.existsSync(tmpBinPath)) {
+    return tmpBinPath;
+  }
+
+  // Auto-download binary from official GitHub release
+  const targetPath = !isWin && !fs.existsSync(binDir) ? tmpBinPath : localBinPath;
+  const downloadUrl = isWin
+    ? 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
+    : 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+
+  try {
+    const res = await axios.get(downloadUrl, {
+      responseType: 'arraybuffer',
+      timeout: 30000,
+    });
+    fs.writeFileSync(targetPath, Buffer.from(res.data));
+    if (!isWin) {
+      fs.chmodSync(targetPath, 0o755);
+    }
+    return targetPath;
+  } catch (err) {
+    console.error('Failed to auto-download yt-dlp binary:', err);
+    return binaryName;
+  }
 }
 
 /**
@@ -32,10 +78,12 @@ export function getYtDlpPath(): string {
  */
 export function getFfmpegDir(): string {
   const localBin = path.join(process.cwd(), 'bin');
-  const localFfmpeg = path.join(localBin, 'ffmpeg.exe');
-  if (fs.existsSync(localFfmpeg)) {
-    return localBin;
-  }
+  const winFfmpeg = path.join(localBin, 'ffmpeg.exe');
+  if (fs.existsSync(winFfmpeg)) return localBin;
+
+  const linuxFfmpeg = path.join(localBin, 'ffmpeg');
+  if (fs.existsSync(linuxFfmpeg)) return localBin;
+
   return '';
 }
 
@@ -43,7 +91,7 @@ export function getFfmpegDir(): string {
  * Check if yt-dlp is installed.
  */
 export async function checkYtDlp(): Promise<boolean> {
-  const ytDlpPath = getYtDlpPath();
+  const ytDlpPath = await getYtDlpPath();
   return new Promise((resolve) => {
     const proc = spawn(ytDlpPath, ['--version'], { shell: false });
     proc.on('close', (code) => resolve(code === 0));
@@ -56,7 +104,11 @@ export async function checkYtDlp(): Promise<boolean> {
  */
 export async function checkFfmpeg(): Promise<boolean> {
   const ffmpegDir = getFfmpegDir();
-  const ffmpegCmd = ffmpegDir ? path.join(ffmpegDir, 'ffmpeg.exe') : 'ffmpeg';
+  const isWin = process.platform === 'win32';
+  const ffmpegCmd = ffmpegDir
+    ? path.join(ffmpegDir, isWin ? 'ffmpeg.exe' : 'ffmpeg')
+    : 'ffmpeg';
+
   return new Promise((resolve) => {
     const proc = spawn(ffmpegCmd, ['-version'], { shell: false });
     proc.on('close', (code) => resolve(code === 0));
@@ -68,7 +120,7 @@ export async function checkFfmpeg(): Promise<boolean> {
  * Analyze a URL using yt-dlp --dump-json.
  */
 export async function analyzeUrl(url: string): Promise<VideoInfo> {
-  const ytDlpPath = getYtDlpPath();
+  const ytDlpPath = await getYtDlpPath();
 
   try {
     return await new Promise<VideoInfo>((resolve, reject) => {
@@ -288,7 +340,7 @@ export interface DownloadCallbacks {
 /**
  * Start a download using yt-dlp + FFmpeg to combine video and audio into ONE single file.
  */
-export function startDownload(
+export async function startDownload(
   downloadId: string,
   url: string,
   format: MediaFormat,
@@ -296,8 +348,8 @@ export function startDownload(
   outputDir: string,
   title: string,
   callbacks: DownloadCallbacks,
-): void {
-  const ytDlpPath = getYtDlpPath();
+): Promise<void> {
+  const ytDlpPath = await getYtDlpPath();
   const ffmpegDir = getFfmpegDir();
 
   if (!fs.existsSync(outputDir)) {
