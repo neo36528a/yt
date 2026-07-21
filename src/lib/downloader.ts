@@ -52,10 +52,12 @@ export async function getYtDlpPath(): Promise<string> {
   }
 
   // Auto-download binary from official GitHub release
-  const targetPath = !isWin && !fs.existsSync(binDir) ? tmpBinPath : localBinPath;
+  // Note: yt-dlp_linux is the self-contained PyInstaller binary (includes Python 3 runtime)
   const downloadUrl = isWin
     ? 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
-    : 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+    : 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux';
+
+  const targetPath = !isWin && !fs.existsSync(binDir) ? tmpBinPath : localBinPath;
 
   try {
     const res = await axios.get(downloadUrl, {

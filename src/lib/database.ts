@@ -16,18 +16,30 @@ let db: Database.Database | null = null;
 function getDb(): Database.Database {
   if (db) return db;
 
-  const dbPath = path.join(process.cwd(), 'data', 'ultra-downloader.db');
+  let dbPath = path.join(process.cwd(), 'data', 'ultra-downloader.db');
+  let dataDir = path.dirname(dbPath);
 
-  // Ensure data directory exists
-  const dataDir = path.dirname(dbPath);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+  try {
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+  } catch {
+    dbPath = path.join('/tmp', 'ultra-downloader.db');
   }
 
-  db = new Database(dbPath);
+  try {
+    db = new Database(dbPath);
+  } catch {
+    dbPath = path.join('/tmp', 'ultra-downloader.db');
+    db = new Database(dbPath);
+  }
 
   // Enable WAL mode for better concurrent access
-  db.pragma('journal_mode = WAL');
+  try {
+    db.pragma('journal_mode = WAL');
+  } catch {
+    // Ignore WAL pragma error on restricted filesystems
+  }
 
   // Create tables
   db.exec(`
