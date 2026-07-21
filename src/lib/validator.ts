@@ -143,8 +143,8 @@ export class RateLimiter {
   }
 }
 
-// Global rate limiter instance
-export const rateLimiter = new RateLimiter(10, 60000);
+// Global rate limiter instance (100 requests per minute)
+export const rateLimiter = new RateLimiter(100, 60000);
 
 // Cleanup every 5 minutes
 if (typeof setInterval !== 'undefined') {

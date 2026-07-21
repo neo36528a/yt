@@ -103,8 +103,7 @@ export async function POST(request: NextRequest) {
       },
 
       cancel() {
-        // Client disconnected — cancel the download
-        downloadQueue.dequeue(downloadId);
+        // Stream closed by client — active background process continues completing the file
       },
     });
 

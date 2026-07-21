@@ -47,7 +47,8 @@ export function useDownload() {
         });
 
         if (!response.ok) {
-          throw new Error('Download request failed');
+          const errData = await response.json().catch(() => null);
+          throw new Error(errData?.error || `Download request failed (${response.status})`);
         }
 
         const reader = response.body?.getReader();
