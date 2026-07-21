@@ -138,7 +138,7 @@ export async function analyzeUrl(url: string): Promise<VideoInfo> {
 
       const proc = spawn(ytDlpPath, args, {
         shell: false,
-        timeout: 35000,
+        timeout: 120000,
       });
 
       let stdout = '';
@@ -223,7 +223,7 @@ async function fallbackOembed(url: string): Promise<VideoInfo> {
     url,
     title,
     thumbnail,
-    duration: 180,
+    duration: 0,
     channel: author,
     uploadDate: new Date().toISOString().split('T')[0].replace(/-/g, ''),
     description: 'Downloaded via Ultra Video Downloader',
