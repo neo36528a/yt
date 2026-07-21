@@ -17,30 +17,40 @@ export async function GET(request: NextRequest) {
 
     const settings = getSettings();
     const downloadsDir = path.resolve(process.cwd(), settings.downloadFolder || './downloads');
+    const tmpDownloadsDir = path.resolve('/tmp', 'downloads');
 
     let targetFilePath: string | null = null;
+    const searchDirs = [downloadsDir, tmpDownloadsDir].filter((d) => fs.existsSync(d));
 
     // 1. Check direct path parameter if valid
     if (customPath && fs.existsSync(path.resolve(customPath))) {
       targetFilePath = path.resolve(customPath);
     }
 
-    // 2. Look up by downloadId in downloads directory
-    if (!targetFilePath && downloadId && fs.existsSync(downloadsDir)) {
-      const files = fs.readdirSync(downloadsDir);
-      const matchedFile = files.find((f) => f.startsWith(downloadId));
-      if (matchedFile) {
-        targetFilePath = path.join(downloadsDir, matchedFile);
+    // 2. Look up by downloadId in downloads directories
+    if (!targetFilePath && downloadId) {
+      for (const dir of searchDirs) {
+        const files = fs.readdirSync(dir);
+        const matchedFile = files.find((f) => f.startsWith(downloadId));
+        if (matchedFile) {
+          targetFilePath = path.join(dir, matchedFile);
+          break;
+        }
       }
     }
 
-    // 3. Fall back: find newest file in downloads directory
-    if (!targetFilePath && fs.existsSync(downloadsDir)) {
-      const files = fs.readdirSync(downloadsDir)
-        .map((f) => ({ name: f, time: fs.statSync(path.join(downloadsDir, f)).mtimeMs }))
-        .sort((a, b) => b.time - a.time);
-      if (files.length > 0) {
-        targetFilePath = path.join(downloadsDir, files[0].name);
+    // 3. Fall back: find newest file in downloads directories
+    if (!targetFilePath) {
+      const allFiles: { path: string; time: number }[] = [];
+      for (const dir of searchDirs) {
+        const files = fs
+          .readdirSync(dir)
+          .map((f) => ({ path: path.join(dir, f), time: fs.statSync(path.join(dir, f)).mtimeMs }));
+        allFiles.push(...files);
+      }
+      allFiles.sort((a, b) => b.time - a.time);
+      if (allFiles.length > 0) {
+        targetFilePath = allFiles[0].path;
       }
     }
 

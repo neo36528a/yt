@@ -4,6 +4,7 @@
 
 import { NextRequest } from 'next/server';
 import path from 'path';
+import fs from 'fs';
 import { validateUrl, rateLimiter } from '@/lib/validator';
 import { downloadQueue } from '@/lib/queue';
 import { getSettings } from '@/lib/database';
@@ -48,9 +49,23 @@ export async function POST(request: NextRequest) {
     const thumbnail: string = body.thumbnail || '';
     const duration: number = body.duration || 0;
 
-    // Get download folder from settings
+    // Get download folder from settings with fallback for cloud deployments
     const settings = getSettings();
-    const outputDir = path.resolve(process.cwd(), settings.downloadFolder);
+    let outputDir = path.resolve(process.cwd(), settings.downloadFolder || './downloads');
+
+    try {
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+      const testFile = path.join(outputDir, `.test_${Date.now()}`);
+      fs.writeFileSync(testFile, 'test');
+      fs.unlinkSync(testFile);
+    } catch {
+      outputDir = path.resolve('/tmp', 'downloads');
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+    }
 
     // Create SSE response stream
     const encoder = new TextEncoder();
