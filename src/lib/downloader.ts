@@ -157,6 +157,11 @@ export function getCookiesPath(): string | null {
 
 /**
  * Common yt-dlp CLI arguments to prevent YouTube bot detection & sign-in blocks.
+ *
+ * KEY FIX: Uses `mediaconnect` (Android VR) player client which returns all
+ * video/audio formats WITHOUT requiring PO Tokens or sign-in authentication.
+ * The `ios`, `web`, and `mweb` clients now require GVS PO Tokens from YouTube
+ * and will fail with "Sign in to confirm you're not a bot" without them.
  */
 export function getYtDlpCommonArgs(): string[] {
   const args: string[] = [
@@ -169,12 +174,14 @@ export function getYtDlpCommonArgs(): string[] {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   ];
 
-  // Configure YouTube extractor client options to bypass 'Sign in to confirm you are not a bot'
+  // Configure YouTube extractor client options to bypass 'Sign in to confirm you are not a bot'.
+  // mediaconnect (Android VR) is the only client that reliably returns all formats
+  // without requiring GVS PO Tokens. Falls back to web if PO token is provided.
   const poToken = process.env.PO_TOKEN || process.env.YOUTUBE_PO_TOKEN;
   if (poToken) {
-    args.push('--extractor-args', `youtube:player_client=ios,web,mweb;po_token=web+${poToken}`);
+    args.push('--extractor-args', `youtube:player_client=mediaconnect,web;po_token=web+${poToken}`);
   } else {
-    args.push('--extractor-args', 'youtube:player_client=ios,web,mweb');
+    args.push('--extractor-args', 'youtube:player_client=mediaconnect');
   }
 
   // Pass cookies if available
