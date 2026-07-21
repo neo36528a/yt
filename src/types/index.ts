@@ -99,6 +99,8 @@ export interface AppSettings {
   showNotifications: boolean;
   autoRetry: boolean;
   maxRetries: number;
+  cookiesText?: string;
+  browserCookies?: 'none' | 'chrome' | 'edge' | 'firefox' | 'brave' | 'opera' | 'safari';
 }
 
 /** API response wrapper */

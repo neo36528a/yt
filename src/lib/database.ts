@@ -212,4 +212,24 @@ export function updateSettings(updates: Partial<AppSettings>): void {
   });
 
   transaction();
+
+  // If cookiesText was updated, sync to data/cookies.txt
+  if ('cookiesText' in updates) {
+    try {
+      const path = require('path');
+      const fs = require('fs');
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      const cookiesFilePath = path.join(dataDir, 'cookies.txt');
+      if (updates.cookiesText && updates.cookiesText.trim()) {
+        fs.writeFileSync(cookiesFilePath, updates.cookiesText.trim());
+      } else if (fs.existsSync(cookiesFilePath)) {
+        fs.unlinkSync(cookiesFilePath);
+      }
+    } catch {
+      // Ignore file error
+    }
+  }
 }

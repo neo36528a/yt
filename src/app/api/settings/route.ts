@@ -46,6 +46,8 @@ export async function PUT(request: NextRequest) {
       'showNotifications',
       'autoRetry',
       'maxRetries',
+      'cookiesText',
+      'browserCookies',
     ];
 
     const filteredUpdates: Partial<AppSettings> = {};

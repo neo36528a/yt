@@ -35,6 +35,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showNotifications: true,
   autoRetry: true,
   maxRetries: 3,
+  cookiesText: '',
+  browserCookies: 'none',
 };
 
 /** API endpoints */

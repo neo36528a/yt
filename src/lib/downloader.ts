@@ -181,6 +181,17 @@ export function getYtDlpCommonArgs(): string[] {
   const cookiesPath = getCookiesPath();
   if (cookiesPath) {
     args.push('--cookies', cookiesPath);
+  } else {
+    // Check if browserCookies setting is configured
+    try {
+      const { getSettings } = require('./database');
+      const settings = getSettings();
+      if (settings.browserCookies && settings.browserCookies !== 'none') {
+        args.push('--cookies-from-browser', settings.browserCookies);
+      }
+    } catch {
+      // Ignore DB read error
+    }
   }
 
   // Proxy support
@@ -530,6 +541,17 @@ export async function startDownload(
     activeProcesses.delete(downloadId);
 
     if (code !== 0) {
+      if (
+        stderrBuf.includes("Sign in to confirm you're not a bot") ||
+        stderrBuf.includes('--cookies-from-browser') ||
+        stderrBuf.includes('exporting YouTube cookies')
+      ) {
+        callbacks.onError(
+          'YOUTUBE_BOT_BLOCK: YouTube requires authentication for this video. Please upload or paste your cookies.txt in Settings to continue.',
+        );
+        return;
+      }
+
       const cleanErr =
         stderrBuf
           .split(/\r?\n/)

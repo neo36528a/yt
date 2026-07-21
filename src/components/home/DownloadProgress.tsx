@@ -5,6 +5,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import {
   Pause,
   Play,
@@ -16,6 +17,7 @@ import {
   AlertCircle,
   Loader2,
   FolderDown,
+  Settings,
 } from 'lucide-react';
 import type { DownloadProgress as DownloadProgressType } from '@/types';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -147,9 +149,28 @@ function DownloadItem({ download, onPause, onResume, onCancel }: DownloadItemPro
 
           {/* Error Details */}
           {isFailed && download.error && (
-            <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-300 flex items-start gap-2 text-left">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <span className="break-words font-medium">{download.error}</span>
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
+              <div className="flex items-start gap-2.5 min-w-0">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <span className="break-words font-medium">
+                  {download.error.includes('YOUTUBE_BOT_BLOCK')
+                    ? download.error.replace('YOUTUBE_BOT_BLOCK: ', '')
+                    : download.error.includes("Sign in to confirm you're not a bot") || download.error.includes('cookies')
+                      ? "YouTube requires authentication for this video. Please upload or paste your cookies.txt in Settings to enable download."
+                      : download.error}
+                </span>
+              </div>
+              {(download.error.includes('YOUTUBE_BOT_BLOCK') ||
+                download.error.includes("Sign in to confirm you're not a bot") ||
+                download.error.includes('cookies')) && (
+                <Link
+                  href="/settings"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-bold shrink-0 text-xs transition-all"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  Open Settings
+                </Link>
+              )}
             </div>
           )}
 

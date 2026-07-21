@@ -18,6 +18,10 @@ import {
   Sun,
   Zap,
   Shield,
+  Key,
+  Upload,
+  FileText,
+  Globe,
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { MagneticButton } from '@/components/ui/MagneticButton';
@@ -153,6 +157,102 @@ export default function SettingsPage() {
                   <span>Unlimited</span>
                   <span>10 MB/s</span>
                 </div>
+              </div>
+            </div>
+          </GlassCard>
+        </motion.div>
+
+        {/* YouTube Authentication & Cookies */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="w-full"
+        >
+          <GlassCard variant="strong" padding="lg" className="border border-white/10 bg-[#12121c]/90 shadow-2xl p-7 sm:p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2.5">
+                <Key className="w-5 h-5 text-amber-400" />
+                YouTube Authentication & Cookies
+              </h3>
+              <span className="text-xs text-amber-400/90 font-bold px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+                Fixes Bot / Sign-In Error
+              </span>
+            </div>
+
+            <p className="text-xs sm:text-sm text-slate-400 mb-6 font-normal leading-relaxed">
+              If YouTube returns <span className="text-red-400 font-mono font-semibold">"Sign in to confirm you're not a bot"</span>, paste your exported <code className="text-amber-300 bg-amber-950/40 px-1.5 py-0.5 rounded font-mono">cookies.txt</code> content or choose your local browser below.
+            </p>
+
+            <div className="flex flex-col gap-6">
+              {/* Browser Cookies (Desktop / Local) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
+                <div>
+                  <label className="text-sm sm:text-base text-white font-semibold block mb-1">
+                    Auto-Extract Browser Cookies
+                  </label>
+                  <p className="text-xs sm:text-sm text-slate-400">
+                    Extract cookies directly from your installed desktop browser
+                  </p>
+                </div>
+                <select
+                  value={settings.browserCookies || 'none'}
+                  onChange={(e) =>
+                    updateSettings({
+                      browserCookies: e.target.value as any,
+                    })
+                  }
+                  className="bg-[#181826] border border-white/15 rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold text-white outline-none cursor-pointer shadow-md"
+                >
+                  <option value="none">Disabled (Use cookies.txt below)</option>
+                  <option value="chrome">Google Chrome</option>
+                  <option value="edge">Microsoft Edge</option>
+                  <option value="firefox">Mozilla Firefox</option>
+                  <option value="brave">Brave Browser</option>
+                  <option value="opera">Opera</option>
+                </select>
+              </div>
+
+              {/* Cookies.txt Content */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm sm:text-base text-white font-semibold flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-purple-400" />
+                    Paste cookies.txt Content
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 font-semibold cursor-pointer">
+                    <Upload className="w-3.5 h-3.5" />
+                    Upload cookies.txt
+                    <input
+                      type="file"
+                      accept=".txt"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (evt) => {
+                            const text = evt.target?.result as string;
+                            if (text) {
+                              updateSettings({ cookiesText: text });
+                            }
+                          };
+                          reader.readAsText(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                <textarea
+                  rows={4}
+                  value={settings.cookiesText || ''}
+                  onChange={(e) => updateSettings({ cookiesText: e.target.value })}
+                  placeholder="# Netscape HTTP Cookie File&#10;.youtube.com TRUE / FALSE 1750000000 LOGIN_INFO ..."
+                  className="w-full bg-[#181826] border border-white/15 rounded-xl p-3.5 text-xs font-mono text-slate-300 placeholder-slate-600 outline-none focus:border-purple-500/60 transition-all resize-y shadow-inner"
+                />
+                <p className="text-[11px] text-slate-500 mt-2">
+                  💡 Tip: Use a browser extension like <strong className="text-slate-400">Get cookies.txt LOCALLY</strong> in Chrome/Firefox to export your Netscape cookies.txt file.
+                </p>
               </div>
             </div>
           </GlassCard>
