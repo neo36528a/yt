@@ -162,14 +162,20 @@ export function getCookiesPath(): string | null {
  * video/audio formats WITHOUT requiring PO Tokens or sign-in authentication.
  * The `ios`, `web`, and `mweb` clients now require GVS PO Tokens from YouTube
  * and will fail with "Sign in to confirm you're not a bot" without them.
+ *
+ * Also passes the EXACT Node.js binary path to --js-runtimes so yt-dlp can
+ * always solve YouTube's n-sig JavaScript challenge, even inside Docker/cloud
+ * containers where Node might not be on PATH.
  */
 export function getYtDlpCommonArgs(): string[] {
+  // Resolve the exact node binary path for yt-dlp JS challenge solver
+  const nodePath = process.execPath; // e.g. /usr/local/bin/node or C:\Program Files\nodejs\node.exe
+
   const args: string[] = [
     '--no-playlist',
-    '--no-warnings',
     '--no-check-certificates',
-    '--js-runtimes',
-    'node',
+    // Pass the EXACT path to node so yt-dlp can always find it for JS challenges
+    '--js-runtimes', `node:${nodePath}`,
     '--user-agent',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   ];
