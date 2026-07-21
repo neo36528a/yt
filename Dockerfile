@@ -1,7 +1,9 @@
 FROM node:20-slim
 
-# Install python3, ffmpeg, ca-certificates, and curl
+# Install build toolchain (for native modules like better-sqlite3), python3, ffmpeg, ca-certificates, and curl
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
     python3 \
     ffmpeg \
     ca-certificates \
